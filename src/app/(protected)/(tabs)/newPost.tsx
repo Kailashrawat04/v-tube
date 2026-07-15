@@ -33,8 +33,15 @@ export default function NewPostScreen() {
       const fileExtension = video.split('.').pop() || 'mp4';
       const fileName = `${user?.id}/${Date.now()}.${fileExtension}`
 
-      const file = new FileSystem.File(video);
-      const fileBuffer = await file.bytes();
+      let fileBuffer: Uint8Array;
+      if (Platform.OS === 'web') {
+        const response = await fetch(video);
+        const arrayBuffer = await response.arrayBuffer();
+        fileBuffer = new Uint8Array(arrayBuffer);
+      } else {
+        const file = new FileSystem.File(video);
+        fileBuffer = await file.bytes();
+      }
 
       if (user) {
         const videoUrl = await uploadVideoToStorage({ fileName, fileExtension, fileBuffer });
@@ -110,11 +117,18 @@ export default function NewPostScreen() {
   };
 
   const stopRecording = () => {
+    if (Platform.OS === 'web') {
+      return;
+    }
     setIsRecording(false);
     cameraRef.current?.stopRecording();
   };
 
   const startRecording = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Not Supported', 'Video recording is not supported in the web browser. Please select a video from your gallery instead.');
+      return;
+    }
     setIsRecording(true);
     const recordedVideo = await cameraRef.current?.recordAsync();
     if (recordedVideo?.uri) {
